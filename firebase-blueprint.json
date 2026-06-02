@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Student profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "dept": { "type": "string" },
+        "year": { "type": "integer" },
+        "course": { "type": "string" },
+        "gender": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "phone": { "type": "string" },
+        "hostelBlock": { "type": "string" },
+        "interests": { "type": "array" },
+        "rating": { "type": "number" },
+        "activityCount": { "type": "integer" },
+        "isProfileComplete": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "fullName", "dept", "year", "course", "gender"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "An activity post highlighting a trip or event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hostId": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dateTime": { "type": "string", "format": "date-time" },
+        "meetingPoint": { "type": "string" },
+        "spotsTotal": { "type": "integer" },
+        "spotsOccupied": { "type": "integer" },
+        "filters": { "type": "object" },
+        "costSplit": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "cancelled", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["hostId", "category", "title", "dateTime", "meetingPoint", "spotsTotal"]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "A request to join an activity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "activityId": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["activityId", "userId", "status"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in an activity group chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "text", "createdAt"]
+    },
+    "Rating": {
+      "title": "Rating",
+      "description": "Post-activity rating for a participant",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "activityId": { "type": "string" },
+        "fromUserId": { "type": "string" },
+        "toUserId": { "type": "string" },
+        "stars": { "type": "integer" },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["activityId", "fromUserId", "toUserId", "stars"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A report against a user or post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["user", "post", "message"] },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "targetId", "targetType", "reason", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user profile data"
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Activity posts"
+    },
+    "/activities/{activityId}/requests/{requestId}": {
+      "schema": "JoinRequest",
+      "description": "Join requests for a specific activity"
+    },
+    "/activities/{activityId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Group chat messages for an activity"
+    },
+    "/ratings/{ratingId}": {
+      "schema": "Rating",
+      "description": "Participant ratings"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "User and content reports"
+    }
+  }
+}

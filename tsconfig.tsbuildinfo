@@ -1,0 +1,1 @@
+{"root":["./vite.config.ts","./dist/assets/index-blvbvqqn.js","./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/activitycard.tsx","./src/components/activityfeed.tsx","./src/components/activitymodal.tsx","./src/components/createactivitymodal.tsx","./src/components/navbar.tsx","./src/components/profileform.tsx","./src/lib/firebase.ts"],"version":"5.8.3"}

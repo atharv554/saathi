@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isIitrEmail() {
+      return isSignedIn() && request.auth.token.email.matches('.*@.*\\.iitr\\.ac\\.in$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 100 &&
+               data.dept is string && data.dept.size() > 0 &&
+               data.year is int && data.year >= 1 && data.year <= 5 &&
+               data.course is string &&
+               data.gender is string &&
+               (data.phone == null || (data.phone is string && data.phone.size() <= 20)) &&
+               data.isProfileComplete is bool;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false; // No blanket user listing
+      allow create: if isOwner(userId) && isIitrEmail() && isValidUser(incoming()) && incoming().uid == userId;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().uid == existing().uid && 
+                    incoming().email == existing().email;
+    }
+
+    // 2. Activities Collection
+    match /activities/{activityId} {
+      function isValidActivity(data) {
+        return data.title is string && data.title.size() > 0 &&
+               data.category in ['Travel', 'Social', 'Sports', 'Study', 'Other'] &&
+               data.dateTime is string &&
+               data.meetingPoint is string &&
+               data.spotsTotal is int && data.spotsTotal > 0 &&
+               data.hostId is string;
+      }
+
+      function isHost() {
+        return isSignedIn() && existing().hostId == request.auth.uid;
+      }
+
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isIitrEmail() && isValidActivity(incoming()) && incoming().hostId == request.auth.uid;
+      allow update: if isHost() && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'destination', 'venue', 'dateTime', 'meetingPoint', 'spotsTotal', 'status', 'isRecurring', 'recurrenceFrequency', 'spotsOccupied']));
+      allow delete: if isHost();
+    }
+
+    // 3. Join Requests
+    match /activities/{activityId}/requests/{requestId} {
+      function isValidRequest(data) {
+        return data.activityId == activityId &&
+               data.userId == request.auth.uid &&
+               data.status in ['pending', 'approved', 'declined'];
+      }
+
+      function isApprovedMember() {
+        return isSignedIn() && (
+          get(/databases/$(database)/documents/activities/$(activityId)).data.hostId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/activities/$(activityId)/requests/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/activities/$(activityId)/requests/$(request.auth.uid)).data.status == 'approved')
+        );
+      }
+
+      allow list, get: if isSignedIn() && (
+        request.auth.uid == requestId || 
+        isApprovedMember()
+      );
+      allow create: if isIitrEmail() && isValidRequest(incoming());
+      allow update: if isSignedIn() && (
+        // Requester can cancel (withdraw)
+        (request.auth.uid == existing().userId && incoming().status == 'cancelled') ||
+        // Host can approve/decline
+        (get(/databases/$(database)/documents/activities/$(activityId)).data.hostId == request.auth.uid && incoming().status in ['approved', 'declined'])
+      );
+    }
+
+    // 4. Chat Messages
+    match /activities/{activityId}/messages/{messageId} {
+      function isMember() {
+        // User must be host OR have an approved join request
+        return isSignedIn() && (
+          get(/databases/$(database)/documents/activities/$(activityId)).data.hostId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/activities/$(activityId)/requests/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/activities/$(activityId)/requests/$(request.auth.uid)).data.status == 'approved')
+        );
+      }
+
+      allow list, get: if isMember();
+      allow create: if isMember() && incoming().senderId == request.auth.uid && incoming().text.size() <= 2000;
+    }
+
+    // 5. Ratings
+    match /ratings/{ratingId} {
+      allow list, get: if isSignedIn();
+      allow create: if isIitrEmail() && incoming().fromUserId == request.auth.uid;
+    }
+
+    // 6. Reports
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
+      allow read: if false; // Admins only (handled via console/server)
+    }
+  }
+}

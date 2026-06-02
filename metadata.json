@@ -1,0 +1,6 @@
+{
+  "name": "SAATHI IITR",
+  "description": "A real-time activity board connecting IIT Roorkee students for travel, food, sports, study, and events.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
