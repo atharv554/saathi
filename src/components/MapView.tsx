@@ -46,13 +46,24 @@ const locationCoords: Record<string, [number, number]> = {
 
 const IITR_CENTER: [number, number] = [29.8649, 77.8966];
 
+// Simple deterministic hash for stable jitter
+function hashJitter(id: string, seed: number): number {
+  let hash = seed;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  }
+  return ((hash % 1000) / 1000) * 0.001; // tiny offset
+}
+
 export function getCoordinatesForActivity(activity: Activity): [number, number] {
+  const jLat = hashJitter(activity.id, 1);
+  const jLng = hashJitter(activity.id, 2);
+
   // If exact GPS coordinates are available, use them!
   if (activity.locationCoords) {
-    // Add a tiny jitter so identical exact locations don't perfectly overlap
     return [
-      activity.locationCoords.lat + (Math.random() - 0.5) * 0.0005,
-      activity.locationCoords.lng + (Math.random() - 0.5) * 0.0005
+      activity.locationCoords.lat + jLat,
+      activity.locationCoords.lng + jLng
     ];
   }
 
@@ -61,13 +72,12 @@ export function getCoordinatesForActivity(activity: Activity): [number, number] 
   
   for (const [key, coords] of Object.entries(locationCoords)) {
     if (locationText.includes(key)) {
-      // Add slight jitter so markers from the same Bhawan don't perfectly overlap
-      return [coords[0] + (Math.random() - 0.5) * 0.0015, coords[1] + (Math.random() - 0.5) * 0.0015];
+      return [coords[0] + jLat * 3, coords[1] + jLng * 3];
     }
   }
   
-  // Default to center with random jitter if location is not recognized
-  return [IITR_CENTER[0] + (Math.random() - 0.5) * 0.005, IITR_CENTER[1] + (Math.random() - 0.5) * 0.005];
+  // Default to center with deterministic offset
+  return [IITR_CENTER[0] + jLat * 10, IITR_CENTER[1] + jLng * 10];
 }
 
 export default function MapView({ activities, onActivityClick, currentUser }: MapViewProps) {

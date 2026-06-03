@@ -28,7 +28,8 @@ import {
   onSnapshot, 
   orderBy,
   addDoc,
-  updateDoc
+  updateDoc,
+  increment
 } from "firebase/firestore";
 
 export default function App() {
@@ -45,6 +46,17 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [isEmailLogin, setIsEmailLogin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Deep-link: auto-open activity from URL ?activity=<id>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const activityId = params.get("activity");
+    if (activityId) {
+      setSelectedActivityId(activityId);
+      // Clean the URL without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -191,7 +203,7 @@ export default function App() {
     try {
       await updateDoc(doc(db, "activities", activityId, "requests", req.id), { status: "approved" });
       await updateDoc(doc(db, "activities", activityId), {
-        spotsOccupied: (act?.spotsOccupied || 1) + 1
+        spotsOccupied: increment(1)
       });
       
       await addDoc(collection(db, "notifications"), {

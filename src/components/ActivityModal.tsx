@@ -14,7 +14,8 @@ import {
   doc, 
   deleteDoc,
   setDoc,
-  getDoc
+  getDoc,
+  increment
 } from "firebase/firestore";
 
 interface ActivityModalProps {
@@ -201,7 +202,7 @@ export default function ActivityModal({ activityId, onClose, currentUser }: Acti
     try {
       await updateDoc(doc(db, "activities", activityId, "requests", request.id), { status: "approved" });
       await updateDoc(doc(db, "activities", activityId), { 
-        spotsOccupied: (activity?.spotsOccupied || 0) + 1 
+        spotsOccupied: increment(1) 
       });
       toast.success("Member approved!");
     } catch (e) {
@@ -220,7 +221,7 @@ export default function ActivityModal({ activityId, onClose, currentUser }: Acti
     
     // Construct a beautiful rich text message
     const location = activity.meetingPoint || activity.venue || activity.destination || "TBD";
-    const textToShare = `*${activity.title}*\n📍 ${location}\n🕒 ${dateStr} at ${timeStr}\n\nJoin me on Saathi: ${window.location.origin}`;
+    const textToShare = `*${activity.title}*\n📍 ${location}\n🕒 ${dateStr} at ${timeStr}\n\nJoin me on Saathi: ${window.location.origin}?activity=${activityId}`;
 
     try {
       // Only use native share on mobile devices where it works reliably

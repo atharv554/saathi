@@ -3,7 +3,7 @@ import { Activity, UserProfile } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { db } from "../lib/firebase";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Star, X } from "lucide-react";
 
 interface RatingModalProps {
@@ -20,15 +20,11 @@ export default function RatingModal({ activity, currentUser, onClose }: RatingMo
   const [alreadyRated, setAlreadyRated] = useState(false);
 
   useEffect(() => {
-    // Check if user already rated this activity
+    // Check if user already rated this activity using deterministic doc ID
     const checkExisting = async () => {
-      const q = query(
-        collection(db, "ratings"),
-        where("activityId", "==", activity.id),
-        where("fromUserId", "==", currentUser.uid)
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) setAlreadyRated(true);
+      const ratingId = `${activity.id}_${currentUser.uid}`;
+      const docSnap = await getDoc(doc(db, "ratings", ratingId));
+      if (docSnap.exists()) setAlreadyRated(true);
     };
     checkExisting();
   }, [activity.id, currentUser.uid]);
@@ -40,14 +36,15 @@ export default function RatingModal({ activity, currentUser, onClose }: RatingMo
     }
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, "ratings"), {
+      const ratingId = `${activity.id}_${currentUser.uid}`;
+      await setDoc(doc(db, "ratings", ratingId), {
         activityId: activity.id,
         activityTitle: activity.title,
         fromUserId: currentUser.uid,
         fromUserName: currentUser.fullName,
         toUserId: activity.hostId,
         rating,
-        review: review.trim(),
+        review: review.trim().slice(0, 500),
         createdAt: new Date().toISOString(),
       });
       toast.success("Rating submitted! Thanks for your feedback.");
